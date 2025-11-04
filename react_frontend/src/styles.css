@@ -1,0 +1,276 @@
+/* Base layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  color: #1f2937;
+  background: linear-gradient(135deg, #fbf6f2 0%, #f3e9df 100%);
+  border: 1px solid #e6dfd6;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(32, 24, 21, 0.08);
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin: 0;
+  color: #1f2937;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(31, 41, 55, 0.04);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #e6dfd6;
+}
+
+.tab {
+  padding: 10px 14px;
+  border: 1px solid #e6dfd6;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2b2b2b;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.tab:hover {
+  background: #f7f2ee;
+  transform: translateY(-1px);
+}
+.tab.active {
+  background: #da7756; /* Anthropic terra cotta */
+  color: #ffffff;
+  border-color: #da7756;
+  box-shadow: 0 2px 8px rgba(218, 119, 86, 0.35);
+}
+
+main {
+  display: grid;
+  gap: 16px;
+}
+
+.footer {
+  margin-top: 16px;
+  color: #666;
+}
+
+/* Arco harmony overrides */
+.arco-card {
+  background: #fbf6f2; /* warm neutral to harmonize with header */
+  border-color: #e6dfd6;
+}
+.arco-card-hoverable:hover {
+  box-shadow: 0 8px 24px rgba(32, 24, 21, 0.10);
+}
+.arco-card-header,
+.arco-card-body {
+  background: transparent;
+}
+
+/* Anthropic-style overrides for Arco buttons and slider */
+.control-card .arco-btn-primary {
+  background-color: #da7756; /* terracotta */
+  border-color: #da7756;
+  color: #ffffff;
+}
+.control-card .arco-btn-primary:hover,
+.control-card .arco-btn-primary:focus {
+  background-color: #c86a4c;
+  border-color: #c86a4c;
+}
+.control-card .arco-btn-secondary {
+  background-color: #f7f2ee;
+  border-color: #e6dfd6;
+  color: #2b2b2b;
+}
+.control-card .arco-btn-secondary:hover {
+  background-color: #f3e9df;
+}
+.control-card .arco-btn-default {
+  background-color: #ffffff;
+  border-color: #e6dfd6;
+  color: #2b2b2b;
+}
+.control-card .arco-btn-default:hover {
+  background-color: #f7f2ee;
+}
+.control-card .arco-btn-danger {
+  background-color: #c14242; /* softer red */
+  border-color: #c14242;
+  color: #ffffff;
+}
+
+.control-card .arco-slider-track {
+  background-color: #da7756;
+}
+.control-card .arco-slider-dot-active {
+  border-color: #da7756;
+}
+.control-card .arco-slider:hover .arco-slider-track {
+  background-color: #c86a4c;
+}
+
+/* Typography enhancements for span/small/input */
+.arco-typography,
+.arco-descriptions-item-label,
+.arco-descriptions-item-value span,
+.arco-tag-content,
+.footer small,
+small {
+  font-family: 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.2px;
+}
+.arco-tag-content { font-weight: 600; }
+.footer small, small { color: #6b7280; }
+
+input,
+.arco-input,
+.footer input {
+  font-family: 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.2px;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.panel h3 {
+  margin: 0 0 8px 0;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.btn-grid { align-items: stretch; }
+
+.panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.kv {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.kv li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+}
+.kv li:last-child { border-bottom: 0; }
+.kv span { color: #667085; }
+
+.skeleton {
+  height: 120px;
+  background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.control-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.control-row input[type=number] {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+.control-row .value { color: #444; }
+
+/* D-pad layout for ControlPanel */
+.dpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 100px));
+  grid-template-rows: repeat(3, 48px);
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+.dpad-grid .arco-btn {
+  width: 100%;
+  height: 100%;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+.btn.danger {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.alert.error { background: #fee2e2; color: #991b1b; }
+.alert.success { background: #dcfce7; color: #166534; }
+.ok { color: #16a34a; }
+.warn { color: #ca8a04; }

@@ -1,0 +1,130 @@
+/* Coze Image Chat Panel (Sass) */
+.coze-image-chat-panel {
+  padding: 16px;
+  display: grid;
+  gap: 16px; // 8px网格的2倍
+  color: #2c3e50;
+}
+
+.image-chat-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.image-chat-desc {
+  color: #666;
+  margin-top: -8px;
+}
+
+.image-chat-form {
+  display: grid;
+  gap: 12px; // 8px网格
+  max-width: 800px;
+}
+
+.image-chat-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 10px; // 8px网格基数
+  transition: box-shadow 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+
+  &:hover {
+    border-color: #da7756;
+    box-shadow: 0 2px 6px rgba(218, 119, 86, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+.image-chat-label {
+  min-width: 80px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.image-chat-input {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    border-color: #da7756;
+    box-shadow: 0 0 0 2px rgba(218, 119, 86, 0.15);
+  }
+}
+
+.image-chat-fileinfo {
+  color: #666;
+  font-size: 12px;
+}
+
+.image-chat-results {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.image-chat-result-row {
+  color: #2c3e50;
+}
+
+.image-chat-code {
+  margin-left: 6px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.image-chat-text {
+  white-space: pre-wrap;
+  margin-top: 6px;
+}
+
+.image-chat-error {
+  margin-top: 8px;
+}
+
+// 按钮增强（不改变原有 button 引用与类结构）
+.coze-image-chat-panel .btn-primary {
+  background: #da7756;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+
+  &:hover:not(:disabled) {
+    background: #c56749;
+    box-shadow: 0 2px 4px rgba(218, 119, 86, 0.3);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .image-chat-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .image-chat-label {
+    min-width: 0;
+  }
+}

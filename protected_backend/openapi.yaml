@@ -1,0 +1,1091 @@
+openapi: 3.0.3
+info:
+  title: Turbopi Control Backend API
+  description: |
+    ROS2-compatible control backend with Zeroconf discovery for Turbopi robot.
+    
+    Supports runtime mode switching between MacBook simulation and Raspberry Pi ROS2 deployment.
+  version: 0.1.0
+  contact:
+    name: Turbopi Team
+    email: team@turbopi.dev
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server (MacBook simulation)
+  - url: http://turbopi.local:8000
+    description: Production server (Raspberry Pi ROS2)
+
+tags:
+  - name: status
+    description: System status and runtime information
+  - name: control
+    description: Direction control and emergency stop
+  - name: camera
+    description: Camera preview and snapshot
+  - name: led
+    description: LED control and status indication
+  - name: llm
+    description: LLM text service
+  - name: exec
+    description: Remote code execution
+
+paths:
+  /status:
+    get:
+      tags: [status]
+      summary: Get system status
+      description: Returns current system status, runtime mode, and service information
+      responses:
+        '200':
+          description: System status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /api/v1/camera/snapshot:
+    post:
+      tags: [camera]
+      summary: Capture camera snapshot
+      description: |
+        Capture a single image frame from the configured ROS2 camera topic and return a JPEG-encoded snapshot.
+        The backend subscribes to `ros2_camera_topic` and waits up to `camera_snapshot_timeout_ms` for a frame.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraSnapshotRequest'
+      responses:
+        '200':
+          description: Snapshot captured successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraSnapshotResponse'
+        '422':
+          description: Unprocessable Entity - camera unavailable or timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/buzzer/set:
+    post:
+      tags: [control]
+      summary: Set buzzer state
+      description: |
+        Control the buzzer with frequency, on/off timing, and repeat count.
+        In ROS2 mode, publishes to the configured `ros2_buzzer_topic`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuzzerSetRequest'
+      responses:
+        '200':
+          description: Buzzer state set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuzzerSetResponse'
+        '422':
+          description: Unprocessable Entity - validation error or runtime limitation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/conversations:
+    post:
+      tags: [llm]
+      summary: Create conversation
+      description: Create a new Coze conversation with optional initial messages
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreateRequest'
+      responses:
+        '200':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationIdResponse'
+
+  /api/v1/coze/conversations/stream:
+    post:
+      tags: [llm]
+      summary: Stream chat with Coze bot
+      description: |
+        Start a streaming conversation with a Coze bot. Returns Server-Sent Events (SSE) 
+        with conversation updates including conversation_id, content chunks, and completion status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamChatRequest'
+      responses:
+        '200':
+          description: Streaming chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - conversation_id: Contains the conversation ID
+                  - content: Contains message content chunks
+                  - completed: Final complete message content
+                  - error: Error information if something goes wrong
+              example: |
+                data: {"type": "conversation_id", "content": "conv_123456"}
+                
+                data: {"type": "content", "content": "Hello"}
+                
+                data: {"type": "content", "content": " there!"}
+                
+                data: {"type": "completed", "content": "Hello there! How can I help you?"}
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/conversations/stream/plugins:
+    post:
+      tags: [llm]
+      summary: Stream chat with Coze bot (handle local plugins)
+      description: |
+        Start a streaming conversation with a Coze bot and automatically handle
+        `CONVERSATION_CHAT_REQUIRES_ACTION` events by invoking local mock plugin functions.
+        Returns SSE with conversation updates including conversation_id, content chunks,
+        and completion status. This endpoint is intended for local plugin demonstration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamChatRequest'
+      responses:
+        '200':
+          description: Streaming chat response with plugin handling
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - conversation_id: Contains the conversation ID
+                  - content: Contains message content chunks
+                  - completed: Final complete message content
+                  - done: Completion signal following the final message
+                  - error: Error information if something goes wrong
+              example: |
+                data: {"type": "conversation_id", "content": "conv_123456"}
+                
+                data: {"type": "content", "content": "Hello"}
+                
+                data: {"type": "completed", "content": "Hello there! How can I help you?"}
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/conversations/{conversation_id}:
+    get:
+      tags: [llm]
+      summary: Retrieve conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationIdResponse'
+    delete:
+      tags: [llm]
+      summary: Delete conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDeleteResponse'
+
+  /api/v1/coze/audio/voices:
+    get:
+      tags: [llm]
+      summary: List available audio voices
+      description: Retrieve available voices from Coze audio API
+      responses:
+        '200':
+          description: Voices listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoicesListResponse'
+
+  /api/v1/coze/audio/voice_id:
+    get:
+      tags: [llm]
+      summary: Get current voice ID
+      description: Get current backend-configured voice_id (falls back to environment)
+      responses:
+        '200':
+          description: Voice ID retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceIdResponse'
+    put:
+      tags: [llm]
+      summary: Set current voice ID
+      description: Persist current voice_id to backend configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoiceIdUpdateRequest'
+      responses:
+        '200':
+          description: Voice ID updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceIdResponse'
+
+  /api/v1/coze/audio/chat:
+    post:
+      tags: [llm]
+      summary: Chat with audio input and save WAV response
+      description: |
+        Synthesizes input audio using current backend voice_id, uploads it to Coze,
+        streams chat to collect PCM audio response, and writes a WAV file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatAudioRequest'
+      responses:
+        '200':
+          description: Audio chat completed and files saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatAudioResponse'
+        '422':
+          description: Unprocessable Entity - configuration or request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/audio/chat/stream:
+    post:
+      tags: [llm]
+      summary: Stream chat with audio input (SSE)
+      description: |
+        Perform audio-based chat and stream text messages via Server-Sent Events (SSE).
+        Event types mirror the conversation stream API: conversation_id, content, completed, done, error.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatAudioRequest'
+      responses:
+        '200':
+          description: Streaming audio chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE stream of chat events:
+                  - conversation_id: Contains the conversation ID
+                  - content: Contains message content chunks
+                  - completed: Final complete message content
+                  - done: Completion signal following the final message
+                  - error: Error information if something goes wrong
+              example: |
+                data: {"type": "conversation_id", "content": "conv_123456"}
+                
+                data: {"type": "content", "content": "你好"}
+                
+                data: {"type": "completed", "content": "你好，我是你的语音助手。"}
+                
+                data: {"type": "done"}
+        '422':
+          description: Unprocessable Entity - configuration or request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/audio/tts:
+    post:
+      tags: [llm]
+      summary: Text-to-speech (TTS) synthesize and optional playback
+      description: |
+        Synthesizes plain text to WAV using the current backend voice_id and optionally plays it on the backend host.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TTSRequest'
+      responses:
+        '200':
+          description: TTS synthesized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TTSResponse'
+        '422':
+          description: Unprocessable Entity - configuration or request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/audio/transcriptions:
+    post:
+      tags: [llm]
+      summary: Audio transcriptions (ASR) — transcribe audio to text
+      description: |
+        Accepts an audio file via multipart/form-data and returns recognized text using Coze Audio Transcriptions API.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Audio transcribed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioTranscriptionsResponse'
+        '422':
+          description: Unprocessable Entity - configuration or request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/files/upload:
+    post:
+      tags: [llm]
+      summary: Upload a local file to Coze and return file_id
+      description: |
+        Accepts a file via multipart/form-data, uploads it to Coze using the backend's configured token,
+        and returns the uploaded document ID and best-effort file metadata.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded to Coze successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CozeFileUploadResponse'
+        '422':
+          description: Unprocessable Entity - configuration error or upload failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/coze/image/chat/stream:
+    post:
+      tags: [llm]
+      summary: Stream picture conversation with optional image (SSE)
+      description: |
+        Accepts an optional image via multipart/form-data along with a user instruction text,
+        uploads the image to Coze to obtain `file_id`, and starts a streaming chat using both text
+        and the image if present. Returns Server-Sent Events (SSE) with conversation updates.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [text, bot_id]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Optional image file to include in the question
+                text:
+                  type: string
+                  description: The user instruction text
+                bot_id:
+                  type: string
+                  description: Coze bot ID
+                user_id:
+                  type: string
+                  description: Optional user identifier
+                conversation_id:
+                  type: string
+                  description: Optional existing conversation ID
+      responses:
+        '200':
+          description: Streaming image chat response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - conversation_id: Contains the conversation ID
+                  - content: Contains message content chunks
+                  - completed: Final complete message content
+                  - done: Completion signal following the final message
+                  - error: Error information if something goes wrong
+              example: |
+                data: {"type": "conversation_id", "content": "conv_123456"}
+                
+                data: {"type": "content", "content": "识别到图片中的文字：..."}
+                
+                data: {"type": "completed", "content": "解析完成"}
+                
+                data: {"type": "done"}
+        '422':
+          description: Unprocessable Entity - configuration or request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      required:
+        - code
+        - message
+        - data
+    ConversationMessageInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required: [role, content]
+    ConversationCreateRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessageInput'
+    ConversationIdResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+        trace_id:
+          type: string
+        mode:
+          type: string
+    ConversationDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            deleted:
+              type: boolean
+        trace_id:
+          type: string
+        mode:
+          type: string
+
+    StreamChatRequest:
+      type: object
+      required:
+        - text
+        - bot_id
+      properties:
+        text:
+          type: string
+          description: The user message to send to the bot
+          example: "Hello, how are you?"
+        bot_id:
+          type: string
+          description: The Coze bot ID to chat with
+          example: "7458849876543210987"
+        conversation_id:
+          type: string
+          description: Optional conversation ID for continuing an existing conversation
+          example: "conv_123456789"
+
+    StatusResponse:
+      type: object
+      required:
+        - code
+        - message
+        - data
+        - trace_id
+        - mode
+      properties:
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Status retrieved successfully"
+        data:
+          type: object
+          properties:
+            runtime_mode:
+              type: string
+              enum: [macbook_sim, raspberry_pi_ros2]
+            service_name:
+              type: string
+            port:
+              type: integer
+            uptime_seconds:
+              type: number
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    Voice:
+      type: object
+      properties:
+        voice_id:
+          type: string
+        name:
+          type: string
+        preview_audio:
+          type: string
+          format: uri
+          description: Preview audio URL for the voice
+
+    VoicesListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            voices:
+              type: array
+              items:
+                $ref: '#/components/schemas/Voice'
+        trace_id:
+          type: string
+        mode:
+          type: string
+
+    VoiceIdResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            voice_id:
+              type: string
+              nullable: true
+        trace_id:
+          type: string
+        mode:
+          type: string
+
+    VoiceIdUpdateRequest:
+      type: object
+      required: [voice_id]
+      properties:
+        voice_id:
+          type: string
+
+    ChatAudioRequest:
+      type: object
+      required: [input_text, bot_id]
+      properties:
+        input_text:
+          type: string
+          description: Text used to synthesize input audio
+          example: "你是基于什么大模型构建的"
+        bot_id:
+          type: string
+          description: Coze bot ID
+          example: "7458849876543210987"
+        user_id:
+          type: string
+          description: Optional user identifier
+          example: "user id"
+        conversation_id:
+          type: string
+          description: Optional conversation ID
+          example: "conv_123456789"
+        filename_prefix:
+          type: string
+          description: Optional filename prefix for saved WAV files
+          example: "coze_chat_test"
+        play:
+          type: boolean
+          description: Whether to play synthesized and response audio on backend
+          example: false
+
+    ChatAudioResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            input_audio_path:
+              type: string
+              description: Absolute path to synthesized input audio WAV file
+            response_audio_path:
+              type: string
+              description: Absolute path to saved response audio WAV file
+            conversation_id:
+              type: string
+            voice_id:
+              type: string
+        trace_id:
+          type: string
+        mode:
+          type: string
+
+    TTSRequest:
+      type: object
+      required: [input_text]
+      properties:
+        input_text:
+          type: string
+          description: Text to synthesize to speech
+          example: "这是一条TTS测试"
+        filename_prefix:
+          type: string
+          description: Optional filename prefix for the saved WAV (fixed name)
+          example: "coze_tts"
+        play:
+          type: boolean
+          description: Whether to play synthesized audio on backend
+          example: true
+
+    TTSResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            tts_audio_path:
+              type: string
+              description: Absolute path to synthesized TTS WAV file
+            voice_id:
+              type: string
+        trace_id:
+          type: string
+        mode:
+          type: string
+
+    AudioTranscriptionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Audio transcribed successfully"
+        data:
+          type: object
+          properties:
+            text:
+              type: string
+              description: Recognized text content from audio file
+            logid:
+              type: string
+              description: Coze API log ID for diagnostics
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - trace_id
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        details:
+          type: object
+          additionalProperties: true
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    CozeFileUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "File uploaded successfully"
+        data:
+          type: object
+          properties:
+            file_id:
+              type: string
+              description: Uploaded file/document ID on Coze
+            file:
+              type: object
+              description: Best-effort metadata returned by Coze SDK
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                size:
+                  type: integer
+                mime_type:
+                  type: string
+                created_at:
+                  type: integer
+                  description: Unix timestamp when created
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    CameraSnapshotRequest:
+      type: object
+      properties:
+        width:
+          type: integer
+          minimum: 320
+          maximum: 1920
+          description: Optional snapshot width
+        height:
+          type: integer
+          minimum: 240
+          maximum: 1080
+          description: Optional snapshot height
+        quality:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: JPEG quality (default 90)
+
+    CameraSnapshotResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Camera snapshot captured"
+        data:
+          type: object
+          properties:
+            snapshot:
+              type: object
+              properties:
+                saved_path:
+                  type: string
+                  description: Absolute path to saved JPEG file (fixed name `turbopi_snapshot.jpg` under `~/Downloads`, overwritten on each snapshot)
+                base64:
+                  type: string
+                  description: Base64-encoded JPEG image
+                width:
+                  type: integer
+                height:
+                  type: integer
+                jpeg_quality:
+                  type: integer
+                timestamp:
+                  type: string
+                  format: date-time
+            ros2_topic:
+              type: string
+              description: ROS2 camera topic used for capture
+            runtime_mode:
+              type: string
+              enum: [macbook_sim, raspberry_pi_ros2]
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    BuzzerSetRequest:
+      type: object
+      properties:
+        freq:
+          type: integer
+          description: Buzzer frequency (Hz)
+          minimum: 0
+          maximum: 10000
+          example: 1900
+        on_time:
+          type: number
+          format: float
+          description: On time (seconds)
+          minimum: 0
+          maximum: 10
+          example: 0.2
+        off_time:
+          type: number
+          format: float
+          description: Off time (seconds)
+          minimum: 0
+          maximum: 10
+          example: 0.01
+        repeat:
+          type: integer
+          description: Repeat count (0 for one-shot)
+          minimum: 0
+          maximum: 100
+          example: 0
+
+    BuzzerSetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Buzzer state set"
+        data:
+          type: object
+          properties:
+            buzzer:
+              type: object
+              properties:
+                freq:
+                  type: integer
+                on_time:
+                  type: number
+                  format: float
+                off_time:
+                  type: number
+                  format: float
+                repeat:
+                  type: integer
+                timestamp:
+                  type: string
+                  format: date-time
+            ros2_topic:
+              type: string
+              description: ROS2 buzzer topic used for command
+            runtime_mode:
+              type: string
+              enum: [macbook_sim, raspberry_pi_ros2]
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+    ControlCommand:
+      type: string
+      description: |
+        Movement direction command.
+        In ROS2 mode, strafe `left`/`right` use `Twist.linear.y` (left `+speed`, right `-speed`).
+        Diagonal movements combine `linear.x` and `linear.y` accordingly.
+      enum:
+        - forward
+        - backward
+        - left
+        - right
+        - forward_left
+        - forward_right
+        - backward_left
+        - backward_right
+        - stop
+        - emergency_stop
+
+    CarCommand:
+      type: object
+      required: [command, speed]
+      properties:
+        command:
+          $ref: '#/components/schemas/ControlCommand'
+        speed:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.5
+        duration_ms:
+          type: integer
+          minimum: 0
+          description: Optional duration for movement in milliseconds
+
+    ControlMoveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+          example: "SUCCESS"
+        message:
+          type: string
+          example: "Command executed"
+        data:
+          type: object
+          properties:
+            result:
+              type: object
+              properties:
+                command:
+                  type: string
+                status:
+                  type: string
+                speed:
+                  type: number
+                execution_time_ms:
+                  type: integer
+                linear_x:
+                  type: number
+                  nullable: true
+                linear_y:
+                  type: number
+                  nullable: true
+                position:
+                  type: object
+                  properties:
+                    x:
+                      type: number
+                    y:
+                      type: number
+                simulated:
+                  type: boolean
+        trace_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [macbook_sim, raspberry_pi_ros2]
+
+# TODO: Add complete API specification for all endpoints
+# This will be populated during Phase 3 implementation
