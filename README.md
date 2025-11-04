@@ -1,6 +1,14 @@
 # Coze_on_TurboPi
 
-Coze CN 在 TurboPi 小车上的一体化解决方案。该项目为前端开源（Vite React 与 Python SDK/示例），后端闭源（FastAPI + ROS2，核心逻辑已编译为 `.so` 库）。支持车控（方向与急停）、摄像头快照、蜂鸣器控制，以及 Coze 对话、TTS/ASR、文件上传、多模态图片会话等能力。
+作者： 茉卷
+
+项目飞书介绍
+https://xqibjsw774k.feishu.cn/docx/GFhld9xqZobqgjx3zMRcjKZjnle?from=from_copylink
+
+扣子智能体 在 TurboPi 小车上的一体化解决方案。
+该项目为前端开源（Vite React 与 Python SDK/示例），
+后端闭源（FastAPI + ROS2，核心逻辑已编译为 `.so` 库）。
+支持车控（方向与急停）、摄像头快照、蜂鸣器控制，以及 Coze 对话、TTS/ASR、文件上传、多模态图片会话等能力。
 
 ---
 
@@ -22,9 +30,9 @@ Coze CN 在 TurboPi 小车上的一体化解决方案。该项目为前端开源
 
 ```
 ┌───────────────────────────────┐        ┌───────────────────────────────┐
-│   前端（开源）                 │        │   后端（闭源）                 │
-│   - Vite + React 演示 UI      │  HTTP  │   - FastAPI + ROS2             │
-│   - Python SDK + Examples     │ <─────▶│   - SSE/HTTP API（已编译为 .so）│
+│   前端（开源）                   │        │   后端（闭源）                   │
+│   - Vite + React 演示 UI       │  HTTP  │   - FastAPI + ROS2            │
+│   - Python SDK + Examples     │ <─────▶│   - SSE/HTTP API（已编译为 .so） │
 │                               │        │   - 与 ROS2 话题交互            │
 └───────────────────────────────┘        └───────────────────────────────┘
             ▲                                        │
@@ -159,6 +167,8 @@ npm run dev
 
 注：控制移动与急停接口遵循后端设计（`ControlCommand`/`CarCommand`/`ControlMoveResponse`），具体路径以后端版本为准。
 
+对话（插件）、导航对话 功能咱不开放。
+
 ---
 
 ## 开发与调试建议
@@ -181,7 +191,7 @@ npm run dev
 - SSE 流式不返回：
   - 检查网络代理与防火墙；确保后端进程仍在运行且未因设备资源不足退出
 - 依赖安装失败：
-  - 使用 `'uvicorn[standard]'` 以安装完整依赖；遇到 `pip` 权限问题可尝试虚拟环境或 `--user`
+  - 使用 `'uvicorn[standard]'` 以安装完整依赖
 
 ---
 
@@ -200,8 +210,6 @@ npm run dev
 
 ## 联系方式
 
-Turbopi Team（示例）：`team@turbopi.dev`
+Turbopi Team（示例）：`support@chatroller.com`
 
 如需企业集成或定制支持，请通过邮箱与我们联系。
-
-Coze CN on TurboPi Car
